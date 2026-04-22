@@ -5,8 +5,40 @@ import {
   albums as albumsCollection,
   listeners as listenersCollection,
 } from "./config/mongoCollections.js";
+import { ObjectId } from "mongodb";
 
-import { v4 as uuidv4 } from "uuid";
+/***
+ * 
+ * NEED TO FIX 
+ * -1 addListener: should trim string input;
+ *  X Handled in errorCheckString helper method returns trim string.
+ * 
+ * -1 addArtist: should trim string input
+ *  X Handled in errorCheckString helper method returns trim string.
+ * 
+ * -1 editArtist: should fail if no fields provided or invalid formats
+ *  X Handled in editArtist resolver - checks if all fields are undefined and throws error, also uses helper methods to validate formats.
+ * 
+ * -2 addAlbum: should fail if artist does not exist;
+ * -2 addAlbum: errors out on track count with valid range;
+ * 
+ * 
+ * -2 favoriteAlbum/unfavoriteAlbum: should fail if either ID is invalid/non-existent;
+ * -3 using uuidv4 instead of MongoDB's ObjectId for IDs;
+ *  X removed to use MongoDB's ObjectId which is auto generated on insert, updated
+ * 
+ * -4 getAlbumsByArtistId: errors out/fails many test cases;
+ * -4 getListenersByAlbumId: errors out/fails many test cases;
+ * -4 getAlbumsByGenre: errors out/fails many test cases;
+ * -4 getArtistsByLabel: errors out/fails many test cases;
+ * -4 getListenersBySubscription: errors out/fails many test cases;
+ * -4 getArtistsSignedBetween: errors out/fails many test cases;
+ * -4 getAlbumsByPromoDateRange: errors out/fails many test cases;
+ * 
+ * 
+ * 
+ */
+
 
 export const resolvers = {
   //Queries********************************************************************
@@ -135,7 +167,13 @@ export const resolvers = {
 
       return artists;
     },
-
+  title: title,
+        genre: genre,
+        track_count: track_count,
+        artist: artist,
+        release_date: release_date,
+        promo_start: promo_start,
+        promo_end: promo_end
     getListenersBySubscription: async (_, args) => {
       args.tier = methods.errorCheckString(args.tier);
       const listeners_collection = await listenersCollection();
@@ -327,7 +365,7 @@ export const resolvers = {
       date_signed = methods.errorCheckDates(date_signed);
 
       let newArtist = {
-        _id: uuidv4(),
+
         stage_name: stage_name,
         genre: genre,
         label: label,
@@ -364,6 +402,21 @@ export const resolvers = {
       } = args;
 
       _id = methods.errorCheckString(_id);
+
+      if (
+        stage_name === undefined &&
+        genre === undefined &&
+        label === undefined &&
+        management_email === undefined &&
+        management_phone === undefined &&
+        home_city === undefined &&
+        date_signed === undefined
+      ) {
+        throw new GraphQLError(
+          "Must provide at least one field to update",
+          { extensions: { code: "NO_UPDATE_FIELDS_PROVIDED" } }
+        );
+      }
 
       if (stage_name !== undefined) {
         stage_name = methods.errorCheckString(stage_name);
@@ -490,7 +543,7 @@ export const resolvers = {
       const listeners_collection = await listenersCollection();
 
       let newListener = {
-        _id: uuidv4(),
+    
         first_name: first_name,
         last_name: last_name,
         email: email,
@@ -632,33 +685,16 @@ export const resolvers = {
         promo_end,
       } = args;
 
-      
-      if(title !== undefined){
-       title = methods.errorCheckString(title);
-      }
+      title = methods.errorCheckString(title);
+      genre = methods.errorCheckString(genre);
+      //todo need to FIX: always validate track_count (don't guard with undefined check for required field)
 
-      if(genre !== undefined){
-        genre = methods.errorCheckString(genre);
-      }
-      
-      if(track_count !== undefined){
       track_count = methods.errorCheckTrackCount(track_count);
-      }
-      if(artist !== undefined){
-
       artist = methods.errorCheckString(artist);
-      }
-      if(release_date !== undefined){
-
       release_date = methods.errorCheckDates(release_date);
-      }
-      if(promo_start !== undefined){
-
       promo_start = methods.errorCheckDates(promo_start);
-      }
-      if(promo_end !== undefined){
       promo_end = methods.errorCheckDates(promo_end);
-      }
+      
 
       if (promo_start >= promo_end) {
         throw new GraphQLError(
@@ -669,24 +705,38 @@ export const resolvers = {
         );
       }
 
-      const albums_collection = await albumsCollection();
+      const artists_collection = await artistsCollection();
+      const artist_doc = await artists_collection.findOne({ _id: artist._id });
+      
+      if (!artist_doc) {
+        throw new GraphQLError("Artist not found", {
+          extensions: { code: "ARTIST_NOT_FOUND" },
+        });
+      }
+      
       let newAlbum = {
-        _id: uuidv4(),
-        title: title,
-        genre: genre,
-        track_count: track_count,
-        artist: artist,
-        release_date: release_date,
-        promo_start: promo_start,
-        promo_end: promo_end
+        //mongo auto generates _id, so we don't need to create it ourselves 
+        //_id: new ObjectId().toString(),
+        title,
+        genre,
+        track_count,
+        artist,
+        release_date,
+        promo_start,
+        promo_end,
       };
+
+  
+      
+      const albums_collection = await albumsCollection();
+
 
       const insertInfo = await albums_collection.insertOne(newAlbum);
 
-      if (!insertInfo.acknowledged || !insertInfo.insertedId)
+      if (!insertInfo.acknowledged || !insertInfo.insertedId) 
         throw new GraphQLError("ERROR: Could Not Add Album", {
           extensions: { code: "ALBUM_NOT_ADDED" },
-        });
+        });      
 
         return await albums_collection.findOne({ _id: insertInfo.insertedId });
     },

@@ -16,7 +16,7 @@ const exportedMethods = {
       extensions: { code: "EMPTY_STRING_PROVIDED" }
     });
 
-  return p_str;
+  return p_str.trim();
  },
  errorCheckDates(p_date){
   //All dates below must be valid MM/DD/YYYY strings.
