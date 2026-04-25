@@ -1,0 +1,21 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Michael Chillemi",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@apollo/client": "^4.1.9",
+    "@apollo/server": "^4.13.0",
+    "graphql": "^16.13.2",
+    "lodash": "^4.17.23",
+    "mongodb": "^7.1.0",
+    "react-router-dom": "^7.14.2",
+    "uuid": "^13.0.0"
+  }
+}
