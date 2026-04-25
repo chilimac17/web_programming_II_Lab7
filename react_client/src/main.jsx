@@ -1,10 +1,28 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
+import React from "react";
+import ReactDom from "react-dom/client"
+import App from "./components/App"
+import "./index.css"
+import { BrowserRouter } from "react-router-dom"
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
+import {
+  ApolloClient,
+  HttpLink,
+  InMemoryCache,
+  ApolloProvider
+} from "@apollo/client"
+
+const client = new ApolloClient({
+  cache: new InMemoryCache(),
+  link: new HttpLink({
+    uri: 'http://localhost:4000'
+  })
+});
+
+
+ReactDom.createRoot(document.getElementById('root')).render(
+  <ApolloProvider client={client}>
+    <BrowserRouter>
     <App />
-  </StrictMode>,
+    </BrowserRouter>
+  </ApolloProvider>,
 )

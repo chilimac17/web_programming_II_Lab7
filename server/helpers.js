@@ -75,19 +75,20 @@ errorCheckPhoneNumber (p_phone) {
 },
 
 errorCheckTrackCount (p_trackCount) {
-  if (typeof p_trackCount !== "number" || !Number.isInteger(p_trackCount) || p_trackCount <= 0) {
+  const newTrackCount = p_trackCount;
+  if (typeof newTrackCount !== "number" || !Number.isInteger(newTrackCount) || newTrackCount <= 0) {
     throw new GraphQLError("ERROR: Track count must be a positive integer", {
       extensions: { code: "INVALID_TRACK_COUNT" }
     });
   }
 
-  if (p_trackCount < 1 || p_trackCount > 200) {
+  if (newTrackCount < 1 || newTrackCount > 200) {
     throw new GraphQLError("ERROR: Track count must be between 1 and 200", {
       extensions: { code: "TRACK_COUNT_OUT_OF_RANGE" }
 
     });
   }
-  return p_trackCount;
+  return newTrackCount;
 }
 };
 export default exportedMethods;
