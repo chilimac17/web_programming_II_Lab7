@@ -131,8 +131,6 @@ function Artists() {
             </h3>
             <p>Genre: {a.genre || "N/A"}</p>
             <p>Label: {a.label || "N/A"}</p>
-            <p>Home City: {a.home_city || "N/A"}</p>
-            <p>Date Signed: {a.date_signed || "N/A"}</p>
             <p># of Albums: {a.numOfAlbums ?? 0}</p>
           </div>
         ))}

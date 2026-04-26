@@ -2,21 +2,18 @@ import { useState } from "react";
 import { useMutation } from "@apollo/client";
 import queries from "../queries";
 
-function EditListenerModal({ listener, onClose, onSaved }) {
+function AddListenerModal({ onClose, onAdded }) {
   const [form, setForm] = useState({
-    first_name: listener.first_name || "",
-    last_name: listener.last_name || "",
-    email: listener.email || "",
-    date_of_birth: listener.date_of_birth || "",
-    subscription_tier: listener.subscription_tier || "FREE",
+    first_name: "",
+    last_name: "",
+    email: "",
+    date_of_birth: "",
+    subscription_tier: "FREE",
   });
   const [errMsg, setErrMsg] = useState("");
 
-  const [editListener, { loading }] = useMutation(queries.EDIT_LISTENER, {
-    refetchQueries: [
-      { query: queries.GET_LISTENERS },
-      { query: queries.GET_LISTENER_BY_ID, variables: { _id: listener._id } },
-    ],
+  const [addListener, { loading }] = useMutation(queries.ADD_LISTENER, {
+    refetchQueries: [{ query: queries.GET_LISTENERS }],
   });
 
   const update = (key, val) => setForm({ ...form, [key]: val });
@@ -25,8 +22,8 @@ function EditListenerModal({ listener, onClose, onSaved }) {
     e.preventDefault();
     setErrMsg("");
     try {
-      await editListener({ variables: { _id: listener._id, ...form } });
-      onSaved();
+      await addListener({ variables: { ...form } });
+      onAdded();
     } catch (err) {
       setErrMsg(err.message);
     }
@@ -35,7 +32,7 @@ function EditListenerModal({ listener, onClose, onSaved }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h2>Edit Listener</h2>
+        <h2>Add Listener</h2>
         {errMsg && <div className="error">{errMsg}</div>}
         <form onSubmit={onSubmit}>
           <div className="form-grid">
@@ -44,6 +41,7 @@ function EditListenerModal({ listener, onClose, onSaved }) {
               <input
                 value={form.first_name}
                 onChange={(e) => update("first_name", e.target.value)}
+                required
               />
             </div>
             <div>
@@ -51,6 +49,7 @@ function EditListenerModal({ listener, onClose, onSaved }) {
               <input
                 value={form.last_name}
                 onChange={(e) => update("last_name", e.target.value)}
+                required
               />
             </div>
             <div className="full">
@@ -59,13 +58,16 @@ function EditListenerModal({ listener, onClose, onSaved }) {
                 type="email"
                 value={form.email}
                 onChange={(e) => update("email", e.target.value)}
+                required
               />
             </div>
             <div>
-              <label>Date of Birth</label>
+              <label>Date of Birth (MM/DD/YYYY)</label>
               <input
                 value={form.date_of_birth}
                 onChange={(e) => update("date_of_birth", e.target.value)}
+                placeholder="01/15/1995"
+                required
               />
             </div>
             <div>
@@ -83,8 +85,8 @@ function EditListenerModal({ listener, onClose, onSaved }) {
             <button type="button" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="primary" disabled={loading}>
-              {loading ? "Saving..." : "Save"}
+            <button type="submit" className="success" disabled={loading}>
+              {loading ? "Adding..." : "Add Listener"}
             </button>
           </div>
         </form>
@@ -93,4 +95,4 @@ function EditListenerModal({ listener, onClose, onSaved }) {
   );
 }
 
-export default EditListenerModal;
+export default AddListenerModal;

@@ -23,9 +23,14 @@ body {
 
 .app-header {
   display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  width: 100%;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
+  padding: 0 2rem;
+  height: 70px;
   border-bottom: 1px solid #2c3036;
   margin-bottom: 1.5rem;
   background: #20242a;
@@ -35,7 +40,7 @@ body {
 .brand {
   font-weight: 700;
   font-size: 1.25rem;
-  color: #7cc5ff;
+  color: #b51313;
   text-decoration: none;
 }
 
@@ -131,8 +136,8 @@ button:disabled {
   cursor: not-allowed;
 }
 button.primary {
-  background: #2c5282;
-  border-color: #3a6db5;
+  background: #42b604;
+  border-color: #9b1111;
 }
 button.danger {
   background: #7a2c2c;

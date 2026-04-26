@@ -2,27 +2,24 @@ import { useState } from "react";
 import { useMutation, useQuery } from "@apollo/client";
 import queries from "../queries";
 
-function EditAlbumModal({ album, onClose, onSaved }) {
+function AddAlbumModal({ onClose, onAdded }) {
   const { data: artistsData } = useQuery(queries.GET_ARTISTS, {
     fetchPolicy: "cache-and-network",
   });
 
   const [form, setForm] = useState({
-    title: album.title || "",
-    genre: album.genre || "",
-    track_count: album.track_count ?? "",
-    artist: album.artist?._id || "",
-    release_date: album.release_date || "",
-    promo_start: album.promo_start || "",
-    promo_end: album.promo_end || "",
+    title: "",
+    genre: "",
+    track_count: "",
+    artist: "",
+    release_date: "",
+    promo_start: "",
+    promo_end: "",
   });
   const [errMsg, setErrMsg] = useState("");
 
-  const [editAlbum, { loading }] = useMutation(queries.EDIT_ALBUM, {
-    refetchQueries: [
-      { query: queries.GET_ALBUMS },
-      { query: queries.GET_ALBUM_BY_ID, variables: { _id: album._id } },
-    ],
+  const [addAlbum, { loading }] = useMutation(queries.ADD_ALBUM, {
+    refetchQueries: [{ query: queries.GET_ALBUMS }],
   });
 
   const update = (key, val) => setForm({ ...form, [key]: val });
@@ -30,25 +27,24 @@ function EditAlbumModal({ album, onClose, onSaved }) {
   const onSubmit = async (e) => {
     e.preventDefault();
     setErrMsg("");
-    const variables = { _id: album._id };
-    if (form.title) variables.title = form.title;
-    if (form.genre) variables.genre = form.genre;
-    if (form.track_count !== "") {
-      const n = parseInt(form.track_count, 10);
-      if (Number.isNaN(n)) {
-        setErrMsg("Track count must be a number.");
-        return;
-      }
-      variables.track_count = n;
+    const trackCountNum = parseInt(form.track_count, 10);
+    if (Number.isNaN(trackCountNum)) {
+      setErrMsg("Track count must be a number.");
+      return;
     }
-    if (form.artist) variables.artist = form.artist;
-    if (form.release_date) variables.release_date = form.release_date;
-    if (form.promo_start) variables.promo_start = form.promo_start;
-    if (form.promo_end) variables.promo_end = form.promo_end;
-
     try {
-      await editAlbum({ variables });
-      onSaved();
+      await addAlbum({
+        variables: {
+          title: form.title,
+          genre: form.genre,
+          track_count: trackCountNum,
+          artist: form.artist,
+          release_date: form.release_date,
+          promo_start: form.promo_start,
+          promo_end: form.promo_end,
+        },
+      });
+      onAdded();
     } catch (err) {
       setErrMsg(err.message);
     }
@@ -57,7 +53,7 @@ function EditAlbumModal({ album, onClose, onSaved }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h2>Edit Album</h2>
+        <h2>Add Album</h2>
         {errMsg && <div className="error">{errMsg}</div>}
         <form onSubmit={onSubmit}>
           <div className="form-grid">
@@ -66,6 +62,7 @@ function EditAlbumModal({ album, onClose, onSaved }) {
               <input
                 value={form.title}
                 onChange={(e) => update("title", e.target.value)}
+                required
               />
             </div>
             <div>
@@ -73,16 +70,18 @@ function EditAlbumModal({ album, onClose, onSaved }) {
               <input
                 value={form.genre}
                 onChange={(e) => update("genre", e.target.value)}
+                required
               />
             </div>
             <div>
-              <label>Track Count</label>
+              <label>Track Count (1-200)</label>
               <input
                 type="number"
                 min="1"
                 max="200"
                 value={form.track_count}
                 onChange={(e) => update("track_count", e.target.value)}
+                required
               />
             </div>
             <div className="full">
@@ -90,8 +89,9 @@ function EditAlbumModal({ album, onClose, onSaved }) {
               <select
                 value={form.artist}
                 onChange={(e) => update("artist", e.target.value)}
+                required
               >
-                <option value="">-- Keep Current --</option>
+                <option value="">-- Select Artist --</option>
                 {(artistsData?.artists ?? []).map((a) => (
                   <option key={a._id} value={a._id}>
                     {a.stage_name}
@@ -100,24 +100,30 @@ function EditAlbumModal({ album, onClose, onSaved }) {
               </select>
             </div>
             <div>
-              <label>Release Date</label>
+              <label>Release Date (MM/DD/YYYY)</label>
               <input
                 value={form.release_date}
                 onChange={(e) => update("release_date", e.target.value)}
+                placeholder="01/15/2020"
+                required
               />
             </div>
             <div>
-              <label>Promo Start</label>
+              <label>Promo Start (MM/DD/YYYY)</label>
               <input
                 value={form.promo_start}
                 onChange={(e) => update("promo_start", e.target.value)}
+                placeholder="01/15/2020"
+                required
               />
             </div>
             <div>
-              <label>Promo End</label>
+              <label>Promo End (MM/DD/YYYY)</label>
               <input
                 value={form.promo_end}
                 onChange={(e) => update("promo_end", e.target.value)}
+                placeholder="02/15/2020"
+                required
               />
             </div>
           </div>
@@ -125,8 +131,8 @@ function EditAlbumModal({ album, onClose, onSaved }) {
             <button type="button" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="primary" disabled={loading}>
-              {loading ? "Saving..." : "Save"}
+            <button type="submit" className="success" disabled={loading}>
+              {loading ? "Adding..." : "Add Album"}
             </button>
           </div>
         </form>
@@ -135,4 +141,4 @@ function EditAlbumModal({ album, onClose, onSaved }) {
   );
 }
 
-export default EditAlbumModal;
+export default AddAlbumModal;
