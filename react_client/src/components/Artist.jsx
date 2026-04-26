@@ -41,9 +41,27 @@ function Artist() {
         {
             const {artist} = data;
             
-            return(<div></div>);
-        }
-        else if(loading)
+            return(
+                <div>
+                    <button onClick={() => setShowAddForm(!showAddForm)}>Create Artist</button>
+                    {showAddForm && <Add type="artist" closeAddFormState={closeAddFormState} />}
+                    <br />
+                    <br />
+                    {artist.map((artist) => (
+                      
+                                <div key={artist.id} >
+                                    <h5>{artist.name}</h5>
+                                    <br />
+                                    <button onClick={() => handleOpenEditModal(artist)}>Edit</button>
+                                    <button onClick={() => handleOpenDeleteModal(artist)}>Delete</button>
+                                    <br />  
+                                </div>
+                    ))}
+                    {showEditModal && (<EditArtistModal isOpen={showEditModal} artist={editArtist} handleClose={handleCloseModals}/>)}
+                    {showDeleteModal && (<DeleteArtistModal isOpen={showDeleteModal} artist={deleteArtist} handleClose={deleteArtist} />)}
+                </div>
+            );
+        } else if(loading)
             {
                 return(<div>Loading...</div>)
             }

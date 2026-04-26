@@ -11,7 +11,7 @@
   },
   "author": "Michael Chillemi 20017987",
   "dependencies": {
-    "@apollo/client": "^4.1.9",
+    "@apollo/client": "^3.8.6",
     "graphql": "^16.13.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
