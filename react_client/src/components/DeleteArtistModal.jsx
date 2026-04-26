@@ -1,71 +1,46 @@
-import React from "react";
-import './App.css'
-import {useMutation} from '@apollo/client';
-import ReactModal from 'react-modal';
+import { useState } from "react";
+import { useMutation } from "@apollo/client";
+import queries from "../queries";
 
-import queries from '../queries';
+function DeleteArtistModal({ artist, onClose, onDeleted }) {
+  const [errMsg, setErrMsg] = useState("");
+  const [removeArtist, { loading }] = useMutation(queries.DELETE_ARTIST, {
+    refetchQueries: [
+      { query: queries.GET_ARTISTS },
+      { query: queries.GET_ALBUMS },
+    ],
+  });
 
-ReactModal.setAppElement('#root');
-    const customStyles = {
-        content: {
-            top: '50%',
-            left: '50%',
-            right: 'auto',
-            bottom: 'auto',
-            marginRight: '-50%',
-            transform: 'translate(-50%, -50%)',
-            width: '50%',
-            border: '1px solid #235c1d',
-            borderRadius: '4px'
-        }
+  const onConfirm = async () => {
+    setErrMsg("");
+    try {
+      await removeArtist({ variables: { _id: artist._id } });
+      onDeleted();
+    } catch (err) {
+      setErrMsg(err.message);
+    }
+  };
 
-        };
-
-function DeleteArtistModal(props) {
-    const [showDeleteModal, setShowDeleteModal] = useState(props.isOpen);
-    const [artist, setArtist] = useState(props.deleteArtist);
-
-    const [deleteArtist] = useMutation(queries.DELETE_ARTIST, {
-        update(cache){
-            cache.modify({
-                fields: {
-                    artist(existingArtists, { readField }) {
-                        return existingArtists.filter(artistRef => artist._id !== readField('id', artistRef),
-                        );
-                    },
-                },
-            });
-        },
-    });
-
-    const handleCloseModal = () => {
-        setShowDeleteModal(false);
-        setArtist(null);
-        props.handleClose();
-    };
-
-    return (
-        <div>
-            <ReactModal isOpen={showDeleteModal} contentLabel="Delete Artist" style={customStyles}> 
-            <div>
-                <p>Are you sure you want to delete this {artist?.stage_name}?</p>
-                <form id='delete-artist' onSubmit={(e) => {
-                    e.preventDefault();
-                    deleteArtist({variables: {id: artist._id}});
-                    setShowDeleteModal(false);
-                    alert("Artist deleted successfully!");
-                    props.handleClose();
-                }}>
-                <br />
-                <br />
-                <button type="submit">Delete Artist</button>
-                </form>
-            </div>
-            <br />
-            <br />
-            <button onClick={handleCloseModal}>Cancel</button>
-            </ReactModal>
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <h2>Delete Artist</h2>
+        {errMsg && <div className="error">{errMsg}</div>}
+        <p>
+          Are you sure you want to delete <strong>{artist.stage_name}</strong>?
+          Their albums will remain but show "No Artist Assigned".
+        </p>
+        <div className="modal-actions">
+          <button type="button" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="danger" onClick={onConfirm} disabled={loading}>
+            {loading ? "Deleting..." : "Delete"}
+          </button>
         </div>
-
-            );
+      </div>
+    </div>
+  );
 }
+
+export default DeleteArtistModal;

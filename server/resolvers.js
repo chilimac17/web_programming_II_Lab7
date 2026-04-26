@@ -7,934 +7,597 @@ import {
 } from "./config/mongoCollections.js";
 import { ObjectId } from "mongodb";
 
-/***
- * 
- * NEED TO FIX 
- * -1 addListener: should trim string input;
- *  X Handled in errorCheckString helper method returns trim string.
- * 
- * -1 addArtist: should trim string input
- *  X Handled in errorCheckString helper method returns trim string.
- * 
- * -1 editArtist: should fail if no fields provided or invalid formats
- *  X Handled in editArtist resolver - checks if all fields are undefined and throws error, also uses helper methods to validate formats.
- * 
- * -2 addAlbum: should fail if artist does not exist;
- * -2 addAlbum: errors out on track count with valid range;
- * 
- * 
- * -2 favoriteAlbum/unfavoriteAlbum: should fail if either ID is invalid/non-existent;
- * -3 using uuidv4 instead of MongoDB's ObjectId for IDs;
- *  X removed to use MongoDB's ObjectId which is auto generated on insert, updated
- * 
- * -4 getAlbumsByArtistId: errors out/fails many test cases;
- * -4 getListenersByAlbumId: errors out/fails many test cases;
- * 
- * -4 getAlbumsByGenre: errors out/fails many test cases;
- * -4 getArtistsByLabel: errors out/fails many test cases;
- * -4 getListenersBySubscription: errors out/fails many test cases;
- * -4 getArtistsSignedBetween: errors out/fails many test cases;
- * -4 getAlbumsByPromoDateRange: errors out/fails many test cases;
- * 
- * 
- * 
- */
-
+const toIdString = (val) => {
+  if (val === null || val === undefined) return null;
+  if (val instanceof ObjectId) return val.toString();
+  return String(val);
+};
 
 export const resolvers = {
-  //Queries********************************************************************
   Query: {
     artists: async () => {
-      const artists_collection = await artistsCollection();
-      const all_artists = await artists_collection.find({}).toArray();
-      if (!all_artists) {
-        throw new GraphQLError("Artist not found", {
-          extensions: { code: "ARTIST_NOT_FOUND" },
-        });
-      }
-      return all_artists;
+      const collection = await artistsCollection();
+      return await collection.find({}).toArray();
     },
 
     listeners: async () => {
-      const listeners_collection = await listenersCollection();
-      const all_listeners = await listeners_collection.find({}).toArray();
-      if (!all_listeners) {
-        throw new GraphQLError("Listener not found", {
-          extensions: { code: "INTERNAL_SERVER_ERROR" },
-        });
-      }
-      return all_listeners;
+      const collection = await listenersCollection();
+      return await collection.find({}).toArray();
     },
 
     albums: async () => {
-      const albums_collection = await albumsCollection();
-      const all_albums = await albums_collection.find({}).toArray();
-      if (!all_albums) {
-        throw new GraphQLError("Album not found", {
-          extensions: { code: "ALBUM_NOT_FOUND" },
-        });
-      }
-      return all_albums;
+      const collection = await albumsCollection();
+      return await collection.find({}).toArray();
     },
 
     getArtistById: async (_, args) => {
-      let newID = methods.errorCheckString(args._id);
-      const artists_collection = await artistsCollection();
-      const artists = await artists_collection.findOne({ _id: new ObjectId(newID) });
-      if (!artists) {
+      const id = methods.errorCheckId(args._id, "_id");
+      const collection = await artistsCollection();
+      const artist = await collection.findOne({ _id: new ObjectId(id) });
+      if (!artist) {
         throw new GraphQLError("Artist not found", {
-          extensions: { code: "ARTIST_NOT_FOUND" },
+          extensions: { code: "NOT_FOUND" },
         });
       }
-      return artists;
+      return artist;
     },
 
     getListenerById: async (_, args) => {
-      let newID = methods.errorCheckString(args._id);
-      const listeners_collection = await listenersCollection();
-      const listener = await listeners_collection.findOne({ _id: new ObjectId(newID) });
+      const id = methods.errorCheckId(args._id, "_id");
+      const collection = await listenersCollection();
+      const listener = await collection.findOne({ _id: new ObjectId(id) });
       if (!listener) {
         throw new GraphQLError("Listener not found", {
-          extensions: { code: "LISTENER_NOT_FOUND" },
+          extensions: { code: "NOT_FOUND" },
         });
       }
       return listener;
     },
 
     getAlbumById: async (_, args) => {
-      const newID = methods.errorCheckString(args._id);
-      const albums_collection = await albumsCollection();
-      const albums = await albums_collection.findOne({ _id: new ObjectId(newID) });
-      if (!albums) {
+      const id = methods.errorCheckId(args._id, "_id");
+      const collection = await albumsCollection();
+      const album = await collection.findOne({ _id: new ObjectId(id) });
+      if (!album) {
         throw new GraphQLError("Album not found", {
-          extensions: { code: "ALBUM_NOT_FOUND" },
+          extensions: { code: "NOT_FOUND" },
         });
       }
-      return albums;
+      return album;
     },
-    //FIXED REF FOR OTHERS
+
     getAlbumsByArtistId: async (_, args) => {
-      const newID = methods.errorCheckString(args.artistId);
-      const albums_collection = await albumsCollection();
-      const albums = await albums_collection.find({ artist: newID }).toArray();
-      if (!albums) {
-        throw new GraphQLError("Albums not found", {
-          extensions: { code: "ALBUMS_NOT_FOUND" },
+      const id = methods.errorCheckId(args.artistId, "artistId");
+      const artistsCol = await artistsCollection();
+      const artist = await artistsCol.findOne({ _id: new ObjectId(id) });
+      if (!artist) {
+        throw new GraphQLError("Artist not found", {
+          extensions: { code: "NOT_FOUND" },
         });
       }
-      return albums;
+      const albumsCol = await albumsCollection();
+      return await albumsCol.find({ artist: new ObjectId(id) }).toArray();
     },
 
     getListenersByAlbumId: async (_, args) => {
-      const newID = methods.errorCheckString(args.albumId);
-
-      const listeners_collection = await listenersCollection();
-      const album_collection = await albumsCollection();
-      const album = await album_collection.findOne({ _id: new ObjectId(newID) });
-
+      const id = methods.errorCheckId(args.albumId, "albumId");
+      const albumsCol = await albumsCollection();
+      const album = await albumsCol.findOne({ _id: new ObjectId(id) });
       if (!album) {
         throw new GraphQLError("Album not found", {
-          extensions: { code: "ALBUM_NOT_FOUND" },
+          extensions: { code: "NOT_FOUND" },
         });
       }
-
-      return album.listenersWhoFavorited;
+      const listenersCol = await listenersCollection();
+      return await listenersCol
+        .find({ favorite_albums: new ObjectId(id) })
+        .toArray();
     },
 
     getAlbumsByGenre: async (_, args) => {
-      let newGenre = methods.errorCheckString(args.genre);
-      newGenre = newGenre.toLowerCase();
-      const albums_collection = await albumsCollection();
-      const albums = await albums_collection
-        .find({ genre: newGenre })
+      const genre = methods.errorCheckString(args.genre, "genre");
+      const collection = await albumsCollection();
+      return await collection
+        .find({ genre: { $regex: `^${escapeRegex(genre)}$`, $options: "i" } })
         .toArray();
-
-      if (!albums || albums.length === 0) {
-        throw new GraphQLError("No albums found for the specified genre", {
-          extensions: { code: "ALBUMS_NOT_FOUND" },
-        });
-      }
-
-      return albums;
     },
 
     getArtistsByLabel: async (_, args) => {
-      let newLabel = methods.errorCheckString(args.label);
-      newLabel = newLabel.toLowerCase();
-      const artists_collection = await artistsCollection();
-      const artists = await artists_collection
-        .find({ label: newLabel })
+      const label = methods.errorCheckString(args.label, "label");
+      const collection = await artistsCollection();
+      return await collection
+        .find({ label: { $regex: `^${escapeRegex(label)}$`, $options: "i" } })
         .toArray();
-
-      if (!artists || artists.length === 0) {
-        throw new GraphQLError("No artists found for the specified label", {
-          extensions: { code: "ARTISTS_NOT_FOUND" },
-        });
-      }
-
-      return artists;
     },
 
     getListenersBySubscription: async (_, args) => {
-      let newTier = methods.errorCheckString(args.tier);
-      newTier = newTier.toUpperCase();
-      if (newTier !== "FREE" && newTier !== "PREMIUM") {
-        throw new GraphQLError("Invalid subscription tier: must be FREE or PREMIUM", {
-          extensions: { code: "INVALID_SUBSCRIPTION_TIER" },
-        });
-      }
-      const listeners_collection = await listenersCollection();
-      const listeners = await listeners_collection
-        .find({ subscription_tier: newTier })
-        .toArray();
-
-      if (!listeners || listeners.length === 0) {
-        throw new GraphQLError(
-          "No listeners found for the specified subscription tier",
-          {
-            extensions: { code: "LISTENERS_NOT_FOUND" },
-          },
-        );
-      }
-
-      return listeners;
+      const tier = methods.errorCheckSubscriptionTier(args.tier);
+      const collection = await listenersCollection();
+      return await collection.find({ subscription_tier: tier }).toArray();
     },
+
     getArtistsSignedBetween: async (_, args) => {
-      const start = methods.errorCheckDates(args.start);
-      const end = methods.errorCheckDates(args.end);
-      methods.errorCheckDateRange(start, end);
-      const startDate = new Date(start);
-      const endDate = new Date(end);
-      const artists_collection = await artistsCollection();
-      const allArtists = await artists_collection.find({}).toArray();
-      const artists = allArtists.filter((a) => {
-        const signed = new Date(a.date_signed);
+      const { start, end } = methods.errorCheckDateRange(args.start, args.end);
+      const startDate = methods.dateFromMDY(start);
+      const endDate = methods.dateFromMDY(end);
+      const collection = await artistsCollection();
+      const all = await collection.find({}).toArray();
+      return all.filter((a) => {
+        if (!a.date_signed) return false;
+        const signed = methods.dateFromMDY(a.date_signed);
         return signed >= startDate && signed <= endDate;
       });
-
-      if (!artists || artists.length === 0) {
-        throw new GraphQLError(
-          "No artists found signed between the specified dates",
-          {
-            extensions: { code: "ARTISTS_NOT_FOUND" },
-          },
-        );
-      }
-
-      return artists;
     },
+
     getAlbumsByPromoDateRange: async (_, args) => {
-      const start = methods.errorCheckDates(args.start);
-      const end = methods.errorCheckDates(args.end);
-      methods.errorCheckDateRange(start, end);
-      const startDate = new Date(start);
-      const endDate = new Date(end);
-
-      const albums_collection = await albumsCollection();
-      const allAlbums = await albums_collection.find({}).toArray();
-      const albums = allAlbums.filter((a) => {
-        const promoStart = new Date(a.promo_start);
-        const promoEnd = new Date(a.promo_end);
-        return promoStart >= startDate && promoEnd <= endDate;
+      const { start, end } = methods.errorCheckDateRange(args.start, args.end);
+      const startDate = methods.dateFromMDY(start);
+      const endDate = methods.dateFromMDY(end);
+      const collection = await albumsCollection();
+      const all = await collection.find({}).toArray();
+      return all.filter((a) => {
+        if (!a.promo_start || !a.promo_end) return false;
+        const ps = methods.dateFromMDY(a.promo_start);
+        const pe = methods.dateFromMDY(a.promo_end);
+        return ps >= startDate && pe <= endDate;
       });
-
-      if (!albums || albums.length === 0) {
-        throw new GraphQLError(
-          "No albums found for the specified promo date range",
-          {
-            extensions: { code: "ALBUMS_NOT_FOUND" },
-          },
-        );
-      }
-
-      return albums;
     },
 
     searchListenersByLastName: async (_, args) => {
-      args.searchTerm = methods.errorCheckString(args.searchTerm);
-
-      const listeners_collection = await listenersCollection();
-      //Returns listeners whose last name contains the searchTerm (case-insensitive).
-      const listeners = await listeners_collection
-        .find({
-          last_name: { $regex: args.searchTerm, $options: "i" },
-        })
+      const term = methods.errorCheckString(args.searchTerm, "searchTerm");
+      const collection = await listenersCollection();
+      return await collection
+        .find({ last_name: { $regex: escapeRegex(term), $options: "i" } })
         .toArray();
-
-      if (!listeners || listeners.length === 0) {
-        throw new GraphQLError(
-          "No listeners found with the specified last name",
-          {
-            extensions: { code: "LISTENERS_NOT_FOUND" },
-          },
-        );
-      }
-
-      return listeners;
     },
   },
 
-  //Type Resolvers********************************************************************
-
   Artist: {
-    albums: async (parentValue) => {
-      const albums_collection = await albumsCollection();
-      return await albums_collection
-        .find({ artist: parentValue._id })
+    _id: (parent) => toIdString(parent._id),
+    albums: async (parent) => {
+      const collection = await albumsCollection();
+      return await collection
+        .find({ artist: new ObjectId(toIdString(parent._id)) })
         .toArray();
     },
-
-    numOfAlbums: async (parentValue) => {
-      //console.log("parentValue:");
-      // console.log(parentValue);
-      const albums_collection = await albumsCollection();
-      let numOfAlbums = await albums_collection.countDocuments({
-        artist: parentValue._id,
+    numOfAlbums: async (parent) => {
+      const collection = await albumsCollection();
+      return await collection.countDocuments({
+        artist: new ObjectId(toIdString(parent._id)),
       });
-
-      return numOfAlbums;
     },
   },
 
   Listener: {
-    favorite_albums: async (parentValue) => {
-      const albums_collection = await albumsCollection();
-      if (!parentValue.favorite_albums || parentValue.favorite_albums.length === 0) {
+    _id: (parent) => toIdString(parent._id),
+    favorite_albums: async (parent) => {
+      if (!parent.favorite_albums || parent.favorite_albums.length === 0) {
         return [];
       }
-
-      return await albums_collection
-        .find({ _id: { $in: parentValue.favorite_albums }})
-        .toArray();
+      const ids = parent.favorite_albums.map((id) => new ObjectId(toIdString(id)));
+      const collection = await albumsCollection();
+      return await collection.find({ _id: { $in: ids } }).toArray();
     },
-    numOfFavoriteAlbums: async (parentValue) => {
-      if (!parentValue.favorite_albums || parentValue.favorite_albums.length === 0) {
-       return 0;
-      }
-      const listeners_collection = await listenersCollection();
-      const listener = await listeners_collection.findOne({ _id: parentValue._id });
-      if (!listener) {
-        throw new GraphQLError("Listener not found", {
-          extensions: { code: "LISTENER_NOT_FOUND" },
-        });
-      }
-
-      return listener.favorite_albums.length;
+    numOfFavoriteAlbums: (parent) => {
+      if (!parent.favorite_albums) return 0;
+      return parent.favorite_albums.length;
     },
   },
 
   Album: {
-    artist: async (parentValue) => {
-      const artists_collection = await artistsCollection();
-      return await artists_collection.findOne({ _id: parentValue.artist });
+    _id: (parent) => toIdString(parent._id),
+    artist: async (parent) => {
+      if (!parent.artist) return null;
+      const collection = await artistsCollection();
+      return await collection.findOne({
+        _id: new ObjectId(toIdString(parent.artist)),
+      });
     },
-
-    listenersWhoFavorited: async (parentValue) => {
-      const listeners_collection = await listenersCollection();
-      return await listeners_collection
-        .find({ favorite_albums: parentValue._id })
+    listenersWhoFavorited: async (parent) => {
+      const collection = await listenersCollection();
+      return await collection
+        .find({ favorite_albums: new ObjectId(toIdString(parent._id)) })
         .toArray();
     },
-
-     numOfListenersWhoFavorited: async (parentValue) => {
-      const listeners_collection = await listenersCollection();
-      return await listeners_collection.countDocuments({
-        favorite_albums: parentValue._id.toString(),
+    numOfListenersWhoFavorited: async (parent) => {
+      const collection = await listenersCollection();
+      return await collection.countDocuments({
+        favorite_albums: new ObjectId(toIdString(parent._id)),
       });
     },
   },
 
-  // Mutations********************************************************************
   Mutation: {
     addArtist: async (_, args) => {
-      let {
-        stage_name,
-        genre,
-        label,
-        management_email,
-        management_phone,
-        home_city,
-        date_signed,
-      } = args;
-      stage_name = methods.errorCheckString(stage_name);
-      genre = methods.errorCheckString(genre);
-      label = methods.errorCheckString(label);
-      management_email = methods.errorCheckEmail(management_email);
-      management_phone = methods.errorCheckPhoneNumber(management_phone);
-      home_city = methods.errorCheckString(home_city);
-      date_signed = methods.errorCheckDates(date_signed);
-
-      let newArtist = {
-
-        stage_name: stage_name,
-        genre: genre,
-        label: label,
-        management_email: management_email,
-        management_phone: management_phone,
-        home_city: home_city,
-        date_signed: date_signed,
+      const newArtist = {
+        stage_name: methods.errorCheckString(args.stage_name, "stage_name"),
+        genre: methods.errorCheckString(args.genre, "genre"),
+        label: methods.errorCheckString(args.label, "label"),
+        management_email: methods.errorCheckEmail(args.management_email),
+        management_phone: methods.errorCheckPhoneNumber(args.management_phone),
+        home_city: methods.errorCheckString(args.home_city, "home_city"),
+        date_signed: methods.errorCheckDateSigned(args.date_signed),
       };
 
-      const artists_collection = await artistsCollection();
-      const insertInfo = await artists_collection.insertOne(newArtist);
-
-      if (!insertInfo.acknowledged || !insertInfo.insertedId)
-        throw new GraphQLError("ERROR: Could Not Add Artist", {
-          extensions: { code: "ARTIST_NOT_ADDED" },
+      const collection = await artistsCollection();
+      const insertInfo = await collection.insertOne(newArtist);
+      if (!insertInfo.acknowledged || !insertInfo.insertedId) {
+        throw new GraphQLError("ERROR: Could not add artist", {
+          extensions: { code: "INTERNAL_SERVER_ERROR" },
         });
-
-      let newArtistPost = await artists_collection.findOne({ _id: insertInfo.insertedId });
-
-      return newArtistPost;
+      }
+      return await collection.findOne({ _id: insertInfo.insertedId });
     },
+
     editArtist: async (_, args) => {
-      let {
-        _id,
-        stage_name,
-        genre,
-        label,
-        management_email,
-        management_phone,
-        home_city,
-        date_signed,
-      } = args;
+      const id = methods.errorCheckId(args._id, "_id");
+      const updates = {};
 
-      _id = methods.errorCheckString(_id);
-
-      if (
-        stage_name === undefined &&
-        genre === undefined &&
-        label === undefined &&
-        management_email === undefined &&
-        management_phone === undefined &&
-        home_city === undefined &&
-        date_signed === undefined
-      ) {
+      const fields = [
+        "stage_name",
+        "genre",
+        "label",
+        "management_email",
+        "management_phone",
+        "home_city",
+        "date_signed",
+      ];
+      const provided = fields.filter((f) => args[f] !== undefined);
+      if (provided.length === 0) {
         throw new GraphQLError(
-          "Must provide at least one field to update",
-          { extensions: { code: "NO_UPDATE_FIELDS_PROVIDED" } }
+          "Must provide at least one field besides _id to update",
+          { extensions: { code: "BAD_USER_INPUT" } }
         );
       }
 
-      if (stage_name !== undefined) {
-        stage_name = methods.errorCheckString(stage_name);
-      }
+      if (args.stage_name !== undefined)
+        updates.stage_name = methods.errorCheckString(args.stage_name, "stage_name");
+      if (args.genre !== undefined)
+        updates.genre = methods.errorCheckString(args.genre, "genre");
+      if (args.label !== undefined)
+        updates.label = methods.errorCheckString(args.label, "label");
+      if (args.management_email !== undefined)
+        updates.management_email = methods.errorCheckEmail(args.management_email);
+      if (args.management_phone !== undefined)
+        updates.management_phone = methods.errorCheckPhoneNumber(args.management_phone);
+      if (args.home_city !== undefined)
+        updates.home_city = methods.errorCheckString(args.home_city, "home_city");
+      if (args.date_signed !== undefined)
+        updates.date_signed = methods.errorCheckDateSigned(args.date_signed);
 
-      if (genre !== undefined) {
-        genre = methods.errorCheckString(genre);
-      }
-
-      if (label !== undefined) {
-        label = methods.errorCheckString(label);
-      }
-
-      if (management_email !== undefined) {
-        management_email = methods.errorCheckEmail(management_email);
-      }
-
-      if (management_phone !== undefined) {
-        management_phone = methods.errorCheckPhoneNumber(management_phone);
-      }
-
-      if (home_city !== undefined) {
-        home_city = methods.errorCheckString(home_city);
-      }
-
-      if (date_signed !== undefined) {
-        date_signed = methods.errorCheckDates(date_signed);
-      }
-  const artists_collection = await artistsCollection();
-      let old_artist = await artists_collection.findOne({ _id: new ObjectId(_id) });
-
-      if (!old_artist) {
-        throw new GraphQLError("Artist not found", {
-          extensions: { code: "ARTIST_NOT_FOUND" },
-        });
-      }
-
-      //update fields
-      old_artist.stage_name = stage_name !== undefined ? stage_name : old_artist.stage_name;
-      old_artist.genre = genre !== undefined ? genre : old_artist.genre;
-      old_artist.label = label !== undefined ? label : old_artist.label;
-      old_artist.management_email = management_email !== undefined ? management_email : old_artist.management_email;
-      old_artist.management_phone = management_phone !== undefined ? management_phone : old_artist.management_phone;
-      old_artist.home_city = home_city !== undefined ? home_city : old_artist.home_city;
-      old_artist.date_signed = date_signed !== undefined ? date_signed : old_artist.date_signed;
-
-    
-
-      const updatedInfo = await artists_collection.findOneAndReplace(
-        { _id:  new ObjectId(_id) },
-        old_artist,
-        { returnDocument: "after" },
+      const collection = await artistsCollection();
+      const result = await collection.findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $set: updates },
+        { returnDocument: "after" }
       );
-
-      if (!updatedInfo)
-        throw new GraphQLError("ERROR: Could Not Update Artist", {
-          extensions: { code: "ARTIST_NOT_UPDATED" },
+      if (!result) {
+        throw new GraphQLError("Artist not found", {
+          extensions: { code: "NOT_FOUND" },
         });
-
-      return updatedInfo;
+      }
+      return result;
     },
+
     removeArtist: async (_, args) => {
-      let newID = methods.errorCheckString(args._id);
-      // # Deletes an artist from MongoDB.
-      const artists_collection = await artistsCollection();
-      const albums_collection = await albumsCollection();
+      const id = methods.errorCheckId(args._id, "_id");
+      const artistsCol = await artistsCollection();
+      const albumsCol = await albumsCollection();
 
-      const artist = await artists_collection.findOne({ _id: new ObjectId(newID) });
-
-      const artistToDelete = await artists_collection.findOneAndDelete({
-        _id: new ObjectId(newID),
+      const removed = await artistsCol.findOneAndDelete({
+        _id: new ObjectId(id),
       });
-
-      if (!artistToDelete) {
+      if (!removed) {
         throw new GraphQLError("Artist not found", {
-          extensions: { code: "ARTIST_NOT_FOUND" },
+          extensions: { code: "NOT_FOUND" },
         });
       }
-      //# Must also set the artist field of all their albums to null.
 
-      await albums_collection.updateMany(
-        { artist: args._id },
-        { $set: { artist: null } },
+      await albumsCol.updateMany(
+        { artist: new ObjectId(id) },
+        { $set: { artist: null } }
       );
 
-      return artistToDelete;
+      return removed;
     },
 
     addListener: async (_, args) => {
-      let first_name = methods.errorCheckString(args.first_name);
-      let last_name = methods.errorCheckString(args.last_name);
-      let email = methods.errorCheckEmail(args.email);
-      let date_of_birth = methods.errorCheckDates(args.date_of_birth);
-      let subscription_tier = methods.errorCheckString(args.subscription_tier);
-      subscription_tier = subscription_tier.toUpperCase();
-      //A listener must be a reasonable age (use min 13, max 120).
-
-      const currentYear = new Date().getFullYear();
-      const birthYear = new Date(date_of_birth).getFullYear();
-      const age = currentYear - birthYear;
-
-      if (age < 13 || age > 120) {
-        throw new GraphQLError(
-          "Invalid date_of_birth: Listener must be between 13 and 120 years old.",
-          {
-            extensions: { code: "INVALID_DATE_OF_BIRTH" },
-          },
-        );
-      }
-
-      
-      const validTiers = ["FREE", "PREMIUM"];
-
-      if (!validTiers.includes(subscription_tier)) {
-        throw new GraphQLError(
-          "Invalid subscription_tier: Must be either 'FREE' or 'PREMIUM'",
-          {
-            extensions: { code: "INVALID_SUBSCRIPTION_TIER" },
-          },
-        );
-      }
-
-      const listeners_collection = await listenersCollection();
-
-      let newListener = {
-    
-        first_name: first_name,
-        last_name: last_name,
-        email: email,
-        date_of_birth: date_of_birth,
-        subscription_tier: subscription_tier,
+      const newListener = {
+        first_name: methods.errorCheckString(args.first_name, "first_name"),
+        last_name: methods.errorCheckString(args.last_name, "last_name"),
+        email: methods.errorCheckEmail(args.email),
+        date_of_birth: methods.errorCheckListenerAge(args.date_of_birth),
+        subscription_tier: methods.errorCheckSubscriptionTier(args.subscription_tier),
+        favorite_albums: [],
       };
 
-      const insertInfo = await listeners_collection.insertOne(newListener);
-
-      if (!insertInfo.acknowledged || !insertInfo.insertedId)
-        throw new GraphQLError("ERROR: Could Not Add Listener", {
-          extensions: { code: "LISTENER_NOT_ADDED" },
+      const collection = await listenersCollection();
+      const insertInfo = await collection.insertOne(newListener);
+      if (!insertInfo.acknowledged || !insertInfo.insertedId) {
+        throw new GraphQLError("ERROR: Could not add listener", {
+          extensions: { code: "INTERNAL_SERVER_ERROR" },
         });
-
-        let new_Listener = await listeners_collection.findOne({ _id: insertInfo.insertedId });
-        
-      return new_Listener;
+      }
+      return await collection.findOne({ _id: insertInfo.insertedId });
     },
+
     editListener: async (_, args) => {
-      let {
-        _id,
-        first_name,
-        last_name,
-        email,
-        date_of_birth,
-        subscription_tier,
-      } = args;
+      const id = methods.errorCheckId(args._id, "_id");
+      const updates = {};
 
-
-
-      _id = methods.errorCheckString(_id);
-
-      if (first_name !== undefined) {
-
-      first_name = methods.errorCheckString(first_name);
-      }
-
-      if (last_name !== undefined) {
-
-      last_name = methods.errorCheckString(last_name);
-      }
-      
-      if (email !== undefined) {
-
-      email = methods.errorCheckEmail(email);
-      }
-      
-      if (date_of_birth !== undefined) {
-        date_of_birth = methods.errorCheckDates(date_of_birth);
-      }
-
-      //A listener must be a reasonable age (use min 13, max 120).
-
-      const currentYear = new Date().getFullYear();
-      const birthYear = new Date(date_of_birth).getFullYear();
-      const age = currentYear - birthYear;
-
-      if (age < 13 || age > 120) {
+      const fields = [
+        "first_name",
+        "last_name",
+        "email",
+        "date_of_birth",
+        "subscription_tier",
+      ];
+      const provided = fields.filter((f) => args[f] !== undefined);
+      if (provided.length === 0) {
         throw new GraphQLError(
-          "Invalid date_of_birth: Listener must be between 13 and 120 years old.",
-          {
-            extensions: { code: "INVALID_DATE_OF_BIRTH" },
-          },
+          "Must provide at least one field besides _id to update",
+          { extensions: { code: "BAD_USER_INPUT" } }
         );
       }
 
-      if (subscription_tier !== undefined) {
-        subscription_tier = methods.errorCheckString(subscription_tier).toUpperCase();
-        const validTiers = ["FREE", "PREMIUM"];
+      if (args.first_name !== undefined)
+        updates.first_name = methods.errorCheckString(args.first_name, "first_name");
+      if (args.last_name !== undefined)
+        updates.last_name = methods.errorCheckString(args.last_name, "last_name");
+      if (args.email !== undefined)
+        updates.email = methods.errorCheckEmail(args.email);
+      if (args.date_of_birth !== undefined)
+        updates.date_of_birth = methods.errorCheckListenerAge(args.date_of_birth);
+      if (args.subscription_tier !== undefined)
+        updates.subscription_tier = methods.errorCheckSubscriptionTier(args.subscription_tier);
 
-        if (!validTiers.includes(subscription_tier)) {
-          throw new GraphQLError(
-            "Invalid subscription_tier: Must be either 'FREE' or 'PREMIUM'",
-            {
-              extensions: { code: "INVALID_SUBSCRIPTION_TIER" },
-            },
-          );
-        }
-      }
-
-      //TODO MC - need to validate if id and another fiels is 
-      
-      const listeners_collection = await listenersCollection();
-
-
-      let old_listener = await listeners_collection.findOne({ _id: new ObjectId(_id) });
-
-      if (!old_listener) {
-        throw new GraphQLError("Listener not found", {
-          extensions: { code: "LISTENER_NOT_FOUND" },
-        });
-      }
-
-      // Update fields
-      old_listener.first_name = first_name !== undefined ? first_name : old_listener.first_name;
-      old_listener.last_name = last_name !== undefined ? last_name : old_listener.last_name;
-      old_listener.email = email !== undefined ? email : old_listener.email;
-      old_listener.date_of_birth = date_of_birth !== undefined ? date_of_birth : old_listener.date_of_birth;
-      old_listener.subscription_tier = subscription_tier !== undefined ? subscription_tier : old_listener.subscription_tier;
-
-    
-
-      const updatedInfo = await listeners_collection.findOneAndReplace(
-        { _id: new ObjectId(_id) },
-        old_listener,
-        { returnDocument: "after" },
+      const collection = await listenersCollection();
+      const result = await collection.findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $set: updates },
+        { returnDocument: "after" }
       );
-
-      if (!updatedInfo)
-        throw new GraphQLError("ERROR: Could Not Update Listener");
-
-      return updatedInfo;
-    },
-    removeListener: async (_, args) => {
-      let newID = methods.errorCheckString(args._id);
-      const listeners_collection = await listenersCollection();
-      const listenerToDelete = await listeners_collection.findOneAndDelete({
-        _id: new ObjectId(newID),
-      });
-
-      if (!listenerToDelete) {
+      if (!result) {
         throw new GraphQLError("Listener not found", {
-          extensions: { code: "LISTENER_NOT_FOUND" },
+          extensions: { code: "NOT_FOUND" },
         });
       }
-
-      return listenerToDelete;
+      return result;
     },
-    addAlbum: async (
-      _,
-     args,
-    ) => {
-      let {
-        title,
-        genre,
-        track_count,
-        artist,
-        release_date,
-        promo_start,
-        promo_end,
-      } = args;
 
-      title = methods.errorCheckString(title);
-      genre = methods.errorCheckString(genre);
-      //todo need to FIX: always validate track_count (don't guard with undefined check for required field)
-
-      track_count = methods.errorCheckTrackCount(track_count);
-      artist = methods.errorCheckString(artist);
-      release_date = methods.errorCheckDates(release_date);
-      promo_start = methods.errorCheckDates(promo_start);
-      promo_end = methods.errorCheckDates(promo_end);
-      
-
-      if (promo_start >= promo_end) {
-        throw new GraphQLError(
-          "Invalid promo date range: start date must be before end date",
-          {
-            extensions: { code: "INVALID_PROMO_DATE_RANGE" },
-          },
-        );
-      }
-
-      const artists_collection = await artistsCollection();
-      const artist_doc = await artists_collection.findOne({ _id: new ObjectId(artist) });
-      
-      if (!artist_doc) {
-        throw new GraphQLError("Artist not found", {
-          extensions: { code: "ARTIST_NOT_FOUND" },
+    removeListener: async (_, args) => {
+      const id = methods.errorCheckId(args._id, "_id");
+      const collection = await listenersCollection();
+      const removed = await collection.findOneAndDelete({
+        _id: new ObjectId(id),
+      });
+      if (!removed) {
+        throw new GraphQLError("Listener not found", {
+          extensions: { code: "NOT_FOUND" },
         });
       }
-      
-      let newAlbum = {
-        //mongo auto generates _id, so we don't need to create it ourselves 
-        //_id: new ObjectId().toString(),
+      return removed;
+    },
+
+    addAlbum: async (_, args) => {
+      const title = methods.errorCheckString(args.title, "title");
+      const genre = methods.errorCheckString(args.genre, "genre");
+      const track_count = methods.errorCheckTrackCount(args.track_count);
+      const artistId = methods.errorCheckId(args.artist, "artist");
+      const release_date = methods.errorCheckDates(args.release_date, "release_date");
+      const promo_start = methods.errorCheckDates(args.promo_start, "promo_start");
+      const promo_end = methods.errorCheckDates(args.promo_end, "promo_end");
+      methods.errorCheckPromoOrder(release_date, promo_start, promo_end);
+
+      const artistsCol = await artistsCollection();
+      const artistDoc = await artistsCol.findOne({
+        _id: new ObjectId(artistId),
+      });
+      if (!artistDoc) {
+        throw new GraphQLError("Artist not found", {
+          extensions: { code: "NOT_FOUND" },
+        });
+      }
+
+      const newAlbum = {
         title,
         genre,
         track_count,
-        artist,
+        artist: new ObjectId(artistId),
         release_date,
         promo_start,
         promo_end,
       };
 
-  
-      
-      const albums_collection = await albumsCollection();
-
-
-      const insertInfo = await albums_collection.insertOne(newAlbum);
-
-      if (!insertInfo.acknowledged || !insertInfo.insertedId) 
-        throw new GraphQLError("ERROR: Could Not Add Album", {
-          extensions: { code: "ALBUM_NOT_ADDED" },
-        });      
-
-        return await albums_collection.findOne({ _id: insertInfo.insertedId });
+      const albumsCol = await albumsCollection();
+      const insertInfo = await albumsCol.insertOne(newAlbum);
+      if (!insertInfo.acknowledged || !insertInfo.insertedId) {
+        throw new GraphQLError("ERROR: Could not add album", {
+          extensions: { code: "INTERNAL_SERVER_ERROR" },
+        });
+      }
+      return await albumsCol.findOne({ _id: insertInfo.insertedId });
     },
-    editAlbum: async (
-      _,
-      args,
-    ) => {
 
-        let {
-          _id,
-          title,
-          genre,
-          track_count,
-          artist,
-          release_date,
-          promo_start,
-          promo_end
-        } = args;
-      if(_id !== undefined){
+    editAlbum: async (_, args) => {
+      const id = methods.errorCheckId(args._id, "_id");
+      const updates = {};
 
-      _id = methods.errorCheckString(_id);
-      }
-       if(title !== undefined){
-       title = methods.errorCheckString(title);
-      }
-
-      if(genre !== undefined){
-        genre = methods.errorCheckString(genre);
-      }
-      if(track_count !== undefined){
-      track_count = methods.errorCheckTrackCount(track_count);
-      }
-      
-      if(artist !== undefined){
-
-      artist = methods.errorCheckString(artist);
-      }
-      if(release_date !== undefined){
-
-      release_date = methods.errorCheckDates(release_date);
-      }
-      if(promo_start !== undefined){
-
-      promo_start = methods.errorCheckDates(promo_start);
-      }
-      if(promo_end !== undefined){
-      promo_end = methods.errorCheckDates(promo_end);
-      }
-
-      if (promo_start !== undefined && promo_end !== undefined && promo_start >= promo_end) {
+      const fields = [
+        "title",
+        "genre",
+        "track_count",
+        "artist",
+        "release_date",
+        "promo_start",
+        "promo_end",
+      ];
+      const provided = fields.filter((f) => args[f] !== undefined);
+      if (provided.length === 0) {
         throw new GraphQLError(
-          "Invalid promo date range: start date must be before end date",
-          {
-            extensions: { code: "INVALID_PROMO_DATE_RANGE" },
-          },
+          "Must provide at least one field besides _id to update",
+          { extensions: { code: "BAD_USER_INPUT" } }
         );
       }
-      const albums_collection = await albumsCollection();
-      let old_album = await albums_collection.findOne({ _id: new ObjectId(_id) });
 
-      if (!old_album) {
+      if (args.title !== undefined)
+        updates.title = methods.errorCheckString(args.title, "title");
+      if (args.genre !== undefined)
+        updates.genre = methods.errorCheckString(args.genre, "genre");
+      if (args.track_count !== undefined)
+        updates.track_count = methods.errorCheckTrackCount(args.track_count);
+      if (args.release_date !== undefined)
+        updates.release_date = methods.errorCheckDates(args.release_date, "release_date");
+      if (args.promo_start !== undefined)
+        updates.promo_start = methods.errorCheckDates(args.promo_start, "promo_start");
+      if (args.promo_end !== undefined)
+        updates.promo_end = methods.errorCheckDates(args.promo_end, "promo_end");
+
+      const albumsCol = await albumsCollection();
+      const existing = await albumsCol.findOne({ _id: new ObjectId(id) });
+      if (!existing) {
         throw new GraphQLError("Album not found", {
-          extensions: { code: "ALBUM_NOT_FOUND" },
+          extensions: { code: "NOT_FOUND" },
         });
       }
 
-      old_album.title = title !== undefined ? title : old_album.title;
-      old_album.genre = genre !== undefined ? genre : old_album.genre;
-      old_album.track_count = track_count !== undefined ? track_count : old_album.track_count;
-      old_album.artist = artist !== undefined ? artist : old_album.artist;
-      old_album.release_date = release_date !== undefined ? release_date : old_album.release_date;
-      old_album.promo_start = promo_start !== undefined ? promo_start : old_album.promo_start;
-      old_album.promo_end = promo_end !== undefined ? promo_end : old_album.promo_end;
-
-      const updatedInfo = await albums_collection.findOneAndReplace(
-        { _id: new ObjectId(_id) },
-        old_album,
-        { returnDocument: "after" },
-      );
-
-      if (!updatedInfo) 
-        {
-        throw new GraphQLError("ERROR: Could Not Update Album");
+      if (args.artist !== undefined) {
+        const artistId = methods.errorCheckId(args.artist, "artist");
+        const artistsCol = await artistsCollection();
+        const artistDoc = await artistsCol.findOne({
+          _id: new ObjectId(artistId),
+        });
+        if (!artistDoc) {
+          throw new GraphQLError("Artist not found", {
+            extensions: { code: "NOT_FOUND" },
+          });
+        }
+        updates.artist = new ObjectId(artistId);
       }
-      return updatedInfo;
+
+      const finalRelease = updates.release_date ?? existing.release_date;
+      const finalPromoStart = updates.promo_start ?? existing.promo_start;
+      const finalPromoEnd = updates.promo_end ?? existing.promo_end;
+      methods.errorCheckPromoOrder(finalRelease, finalPromoStart, finalPromoEnd);
+
+      const result = await albumsCol.findOneAndUpdate(
+        { _id: new ObjectId(id) },
+        { $set: updates },
+        { returnDocument: "after" }
+      );
+      return result;
     },
+
     removeAlbum: async (_, args) => {
-      let newID = methods.errorCheckString(args._id);
-      const albums_collection = await albumsCollection();
-      const albumToDelete = await albums_collection.findOneAndDelete({
-        _id: new ObjectId(newID),
+      const id = methods.errorCheckId(args._id, "_id");
+      const albumsCol = await albumsCollection();
+      const removed = await albumsCol.findOneAndDelete({
+        _id: new ObjectId(id),
       });
-
-      if (!albumToDelete) {
+      if (!removed) {
         throw new GraphQLError("Album not found", {
-          extensions: { code: "ALBUM_NOT_FOUND" },
+          extensions: { code: "NOT_FOUND" },
         });
       }
 
-      //Must also remove this album’s ID from all listeners’ favorite_albums arrays
-      const listeners_collection = await listenersCollection();
-      await listeners_collection.updateMany(
-        { favorite_albums: newID },
-        { $pull: { favorite_albums: newID } },
+      const listenersCol = await listenersCollection();
+      await listenersCol.updateMany(
+        { favorite_albums: new ObjectId(id) },
+        { $pull: { favorite_albums: new ObjectId(id) } }
       );
 
-      return albumToDelete;
+      return removed;
     },
+
     updateAlbumArtist: async (_, args) => {
-      let newAlbumId = methods.errorCheckString(args.albumId);
-      let newArtistId = methods.errorCheckString(args.artistId);
-      const albums_collection = await albumsCollection();
-      const artists_collection = await artistsCollection();
+      const albumId = methods.errorCheckId(args.albumId, "albumId");
+      const artistId = methods.errorCheckId(args.artistId, "artistId");
 
-      let album = await albums_collection.findOne({ _id: new ObjectId(newAlbumId) });
-      let artist = await artists_collection.findOne({ _id: new ObjectId(newArtistId) });
+      const albumsCol = await albumsCollection();
+      const artistsCol = await artistsCollection();
 
-      if (!album) {
-        throw new GraphQLError("Album not found", {
-          extensions: { code: "ALBUM_NOT_FOUND" },
-        });
-      }
+      const artist = await artistsCol.findOne({ _id: new ObjectId(artistId) });
       if (!artist) {
         throw new GraphQLError("Artist not found", {
-          extensions: { code: "ARTIST_NOT_FOUND" },
+          extensions: { code: "NOT_FOUND" },
         });
       }
-      album.artist = artist._id;
 
-      
-
-      const updatedInfo = await albums_collection.findOneAndReplace(
-        { _id: new ObjectId(album._id) },
-        album,
-        { returnDocument: "after" },
+      const result = await albumsCol.findOneAndUpdate(
+        { _id: new ObjectId(albumId) },
+        { $set: { artist: new ObjectId(artistId) } },
+        { returnDocument: "after" }
       );
-
-      if (!updatedInfo)
-        throw new GraphQLError("ERROR: Could Not Update Album", {
-          extensions: { code: "ALBUM_NOT_UPDATED" },
+      if (!result) {
+        throw new GraphQLError("Album not found", {
+          extensions: { code: "NOT_FOUND" },
         });
-      return updatedInfo;
+      }
+      return result;
     },
+
     favoriteAlbum: async (_, args) => {
-      let newListenerId = methods.errorCheckString(args.listenerId);
-      let newAlbumId = methods.errorCheckString(args.albumId);
+      const listenerId = methods.errorCheckId(args.listenerId, "listenerId");
+      const albumId = methods.errorCheckId(args.albumId, "albumId");
 
-      const listeners_collection = await listenersCollection();
-      const albums_collection = await albumsCollection();
+      const listenersCol = await listenersCollection();
+      const albumsCol = await albumsCollection();
 
-      let listener = await listeners_collection.findOne({ _id: newListenerId });
-      const album = await albums_collection.findOne({ _id: newAlbumId });
-
+      const listener = await listenersCol.findOne({
+        _id: new ObjectId(listenerId),
+      });
       if (!listener) {
         throw new GraphQLError("Listener not found", {
-          extensions: { code: "LISTENER_NOT_FOUND" },
+          extensions: { code: "NOT_FOUND" },
         });
       }
+      const album = await albumsCol.findOne({ _id: new ObjectId(albumId) });
       if (!album) {
         throw new GraphQLError("Album not found", {
-          extensions: { code: "ALBUM_NOT_FOUND" },
+          extensions: { code: "NOT_FOUND" },
         });
       }
 
- const updatedListener = await listeners_collection.findOneAndUpdate(
-    { _id: new ObjectId(newListenerId) },
-    { $addToSet: { favorite_albums: newAlbumId } }, 
-    { returnDocument: "after" }
-  );
-
-  return updatedListener;
+      const result = await listenersCol.findOneAndUpdate(
+        { _id: new ObjectId(listenerId) },
+        { $addToSet: { favorite_albums: new ObjectId(albumId) } },
+        { returnDocument: "after" }
+      );
+      return result;
     },
+
     unfavoriteAlbum: async (_, args) => {
-      let newListenerId = methods.errorCheckString(args.listenerId);
-      let newAlbumId = methods.errorCheckString(args.albumId);
+      const listenerId = methods.errorCheckId(args.listenerId, "listenerId");
+      const albumId = methods.errorCheckId(args.albumId, "albumId");
 
-      const listeners_collection = await listenersCollection();
+      const listenersCol = await listenersCollection();
+      const albumsCol = await albumsCollection();
 
-      let listener = await listeners_collection.findOne({ _id: new ObjectId(newListenerId) });
-      const album = await albums_collection.findOne({ _id: new ObjectId(newAlbumId) });
-
+      const listener = await listenersCol.findOne({
+        _id: new ObjectId(listenerId),
+      });
       if (!listener) {
         throw new GraphQLError("Listener not found", {
-          extensions: { code: "LISTENER_NOT_FOUND" },
+          extensions: { code: "NOT_FOUND" },
         });
       }
-
+      const album = await albumsCol.findOne({ _id: new ObjectId(albumId) });
       if (!album) {
         throw new GraphQLError("Album not found", {
-          extensions: { code: "ALBUM_NOT_FOUND" },
+          extensions: { code: "NOT_FOUND" },
         });
       }
 
-      const updatedListener = await listeners_collection.findOneAndUpdate(
-    { _id: new ObjectId(newListenerId) },
-    { $pull: { favorite_albums: new ObjectId(newAlbumId) } },
-    { returnDocument: "after" }
-  );
-
-  return updatedListener;
+      const result = await listenersCol.findOneAndUpdate(
+        { _id: new ObjectId(listenerId) },
+        { $pull: { favorite_albums: new ObjectId(albumId) } },
+        { returnDocument: "after" }
+      );
+      return result;
     },
   },
 };
+
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}

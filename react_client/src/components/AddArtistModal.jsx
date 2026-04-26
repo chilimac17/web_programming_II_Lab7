@@ -2,23 +2,20 @@ import { useState } from "react";
 import { useMutation } from "@apollo/client";
 import queries from "../queries";
 
-function EditArtistModal({ artist, onClose, onSaved }) {
+function AddArtistModal({ onClose, onAdded }) {
   const [form, setForm] = useState({
-    stage_name: artist.stage_name || "",
-    genre: artist.genre || "",
-    label: artist.label || "",
-    management_email: artist.management_email || "",
-    management_phone: artist.management_phone || "",
-    home_city: artist.home_city || "",
-    date_signed: artist.date_signed || "",
+    stage_name: "",
+    genre: "",
+    label: "",
+    management_email: "",
+    management_phone: "",
+    home_city: "",
+    date_signed: "",
   });
   const [errMsg, setErrMsg] = useState("");
 
-  const [editArtist, { loading }] = useMutation(queries.EDIT_ARTIST, {
-    refetchQueries: [
-      { query: queries.GET_ARTISTS },
-      { query: queries.GET_ARTIST_BY_ID, variables: { _id: artist._id } },
-    ],
+  const [addArtist, { loading }] = useMutation(queries.ADD_ARTIST, {
+    refetchQueries: [{ query: queries.GET_ARTISTS }],
   });
 
   const update = (key, val) => setForm({ ...form, [key]: val });
@@ -27,8 +24,8 @@ function EditArtistModal({ artist, onClose, onSaved }) {
     e.preventDefault();
     setErrMsg("");
     try {
-      await editArtist({ variables: { _id: artist._id, ...form } });
-      onSaved();
+      await addArtist({ variables: { ...form } });
+      onAdded();
     } catch (err) {
       setErrMsg(err.message);
     }
@@ -37,7 +34,7 @@ function EditArtistModal({ artist, onClose, onSaved }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h2>Edit Artist</h2>
+        <h2>Add Artist</h2>
         {errMsg && <div className="error">{errMsg}</div>}
         <form onSubmit={onSubmit}>
           <div className="form-grid">
@@ -46,6 +43,7 @@ function EditArtistModal({ artist, onClose, onSaved }) {
               <input
                 value={form.stage_name}
                 onChange={(e) => update("stage_name", e.target.value)}
+                required
               />
             </div>
             <div>
@@ -53,6 +51,7 @@ function EditArtistModal({ artist, onClose, onSaved }) {
               <input
                 value={form.genre}
                 onChange={(e) => update("genre", e.target.value)}
+                required
               />
             </div>
             <div>
@@ -60,6 +59,7 @@ function EditArtistModal({ artist, onClose, onSaved }) {
               <input
                 value={form.label}
                 onChange={(e) => update("label", e.target.value)}
+                required
               />
             </div>
             <div>
@@ -68,13 +68,16 @@ function EditArtistModal({ artist, onClose, onSaved }) {
                 type="email"
                 value={form.management_email}
                 onChange={(e) => update("management_email", e.target.value)}
+                required
               />
             </div>
             <div>
-              <label>Management Phone</label>
+              <label>Management Phone (###-###-####)</label>
               <input
                 value={form.management_phone}
                 onChange={(e) => update("management_phone", e.target.value)}
+                placeholder="555-123-4567"
+                required
               />
             </div>
             <div>
@@ -82,6 +85,7 @@ function EditArtistModal({ artist, onClose, onSaved }) {
               <input
                 value={form.home_city}
                 onChange={(e) => update("home_city", e.target.value)}
+                required
               />
             </div>
             <div>
@@ -89,6 +93,8 @@ function EditArtistModal({ artist, onClose, onSaved }) {
               <input
                 value={form.date_signed}
                 onChange={(e) => update("date_signed", e.target.value)}
+                placeholder="01/15/2020"
+                required
               />
             </div>
           </div>
@@ -97,8 +103,8 @@ function EditArtistModal({ artist, onClose, onSaved }) {
             <button type="button" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="primary" disabled={loading}>
-              {loading ? "Saving..." : "Save"}
+            <button type="submit" className="success" disabled={loading}>
+              {loading ? "Adding..." : "Add Artist"}
             </button>
           </div>
         </form>
@@ -107,4 +113,4 @@ function EditArtistModal({ artist, onClose, onSaved }) {
   );
 }
 
-export default EditArtistModal;
+export default AddArtistModal;
