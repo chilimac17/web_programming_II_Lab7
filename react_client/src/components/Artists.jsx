@@ -124,14 +124,22 @@ function Artists() {
       )}
 
       <div className="list-grid">
-        {listArtists.map((a) => (
-          <div className="list-item" key={a._id}>
+        {listArtists.map((artist) => (
+          <div className="list-item" key={artist._id}>
             <h3>
-              <Link to={`/artists/${a._id}`}>{a.stage_name}</Link>
+              <Link to={`/artists/${artist._id}`}>{artist.stage_name}</Link>
             </h3>
-            <p>Genre: {a.genre || "N/A"}</p>
-            <p>Label: {a.label || "N/A"}</p>
-            <p># of Albums: {a.numOfAlbums ?? 0}</p>
+            <p>Genre: {artist.genre || "N/A"}</p>
+            <p>Label: {artist.label || "N/A"}</p>
+            <p># of Albums: {artist.numOfAlbums ?? 0}</p>
+            {/*
+            <button className="primary" onClick={() => setShowEdit(true)}>
+            Edit Artist
+          </button>
+          <button className="danger" onClick={() => setShowDelete(true)}>
+            Delete Artist
+          </button>
+            */}
           </div>
         ))}
       </div>

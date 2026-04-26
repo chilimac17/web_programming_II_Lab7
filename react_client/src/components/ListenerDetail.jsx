@@ -135,7 +135,7 @@ function ListenerDetail() {
             <tbody>
               {listener.favorite_albums.map((al) => (
                 <tr key={al._id}>
-                  <td>{al.title}</td>
+                  <td><Link to={`/albums/${al._id}`}>{al.title}</Link></td>
                   <td>{al.genre}</td>
                   <td>
                     {al.artist ? (
@@ -145,7 +145,7 @@ function ListenerDetail() {
                     )}
                   </td>
                   <td>
-                    <Link to={`/albums/${al._id}`}>View</Link>
+                    
                   </td>
                   <td>
                     <button

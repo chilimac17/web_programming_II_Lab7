@@ -53,12 +53,12 @@ function ArtistDetail() {
           <dd>{artist.genre || "N/A"}</dd>
           <dt>Label</dt>
           <dd>{artist.label || "N/A"}</dd>
-          <dt>Home City</dt>
-          <dd>{artist.home_city || "N/A"}</dd>
           <dt>Management Email</dt>
           <dd>{artist.management_email || "N/A"}</dd>
           <dt>Management Phone</dt>
           <dd>{artist.management_phone || "N/A"}</dd>
+          <dt>Home City</dt>
+          <dd>{artist.home_city || "N/A"}</dd>
           <dt>Date Signed</dt>
           <dd>{artist.date_signed || "N/A"}</dd>
           <dt># of Albums</dt>
@@ -86,15 +86,12 @@ function ArtistDetail() {
             <tbody>
               {artistAlbums.map((al) => (
                 <tr key={al._id}>
-                  <td>{al.title}</td>
+                  <td><Link to={`/albums/${al._id}`}>{al.title}</Link></td>
                   <td>{al.genre}</td>
                   <td>{al.track_count}</td>
                   <td>{al.release_date}</td>
                   <td>
                     {al.promo_start} → {al.promo_end}
-                  </td>
-                  <td>
-                    <Link to={`/albums/${al._id}`}>View</Link>
                   </td>
                 </tr>
               ))}

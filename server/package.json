@@ -6,9 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Michael Chillemi",
-  "license": "ISC",
-  "description": "",
+  "author": "Michael Chillemi 20017987",
   "dependencies": {
     "@apollo/client": "^4.1.9",
     "@apollo/server": "^4.13.0",

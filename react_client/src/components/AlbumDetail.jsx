@@ -159,12 +159,9 @@ function AlbumDetail() {
                 {fans.map((l) => (
                   <tr key={l._id}>
                     <td>
-                      {l.first_name} {l.last_name}
+                      <Link to={`/listeners/${l._id}`}>{l.first_name} {l.last_name}</Link>
                     </td>
                     <td>{l.subscription_tier}</td>
-                    <td>
-                      <Link to={`/listeners/${l._id}`}>View</Link>
-                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -128,11 +128,6 @@ function Albums() {
               <Link to={`/albums/${al._id}`}>{al.title}</Link>
             </h3>
             <p>Genre: {al.genre || "N/A"}</p>
-            <p>Tracks: {al.track_count ?? "N/A"}</p>
-            <p>Release: {al.release_date || "N/A"}</p>
-            <p>
-              Promo: {al.promo_start || "N/A"} → {al.promo_end || "N/A"}
-            </p>
             <p>
               Artist:{" "}
               {al.artist ? (
@@ -143,9 +138,7 @@ function Albums() {
                 <span className="muted">No Artist Assigned</span>
               )}
             </p>
-            {typeof al.numOfListenersWhoFavorited === "number" && (
-              <p>Favorited by: {al.numOfListenersWhoFavorited} listener(s)</p>
-            )}
+            <p>Tracks: {al.track_count ?? "N/A"}</p>
           </div>
         ))}
       </div>
